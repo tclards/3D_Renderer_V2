@@ -24,6 +24,17 @@ __declspec(align(16)) struct MeshData
 	H2B::ATTRIBUTES material;
 };
 
+typedef struct _OBJ_VEC3_
+{
+	float x, y, z; // 3D Coordinate.
+}OBJ_VEC3;
+typedef struct _OBJ_VERT_
+{
+	OBJ_VEC3 pos; // Left-handed +Z forward coordinate w not provided, assumed to be 1.
+	OBJ_VEC3 uvw; // D3D/Vulkan style top left 0,0 coordinate.
+	OBJ_VEC3 nrm; // Provided direct from obj file, may or may not be normalized.
+}OBJ_VERT;
+
 // Creation, Rendering & Cleanup
 class Renderer
 {
@@ -66,8 +77,8 @@ class Renderer
 	// load level data
 	GW::SYSTEM::GLog log;
 	Level_Data loadedLevel;
-	const char* level_00 = "../../GameLevel.txt";
-	const char* level_01 = "../../GameLevelTest.txt";
+	const char* level_00 = "../Levels/GameLevel.txt";
+	const char* level_01 = "../Levels/GameLevelTest.txt";
 	const char* levels[2] = { level_00, level_01 };
 	int levelIndex = 0;
 
@@ -76,8 +87,8 @@ class Renderer
 	GW::AUDIO::GSound loadingFX;
 	GW::AUDIO::GMusic music;
 
-	const char* loadingSound = "../../loadingFX.wav";
-	const char* backgroundMusic = "../../music.wav";
+	const char* loadingSound = "../SoundFX/loadingFX.wav";
+	const char* backgroundMusic = "../SoundFX/music.wav";
 
 	// variables for rendering wireframes
 	ID3D11RasterizerState* WireFrame;
@@ -146,7 +157,7 @@ private:
 		log.Log("Start Program.");
 
 		loadedLevel.UnloadLevel();
-		loadedLevel.LoadLevel(levelToLoad, "../../Assets/Level_Assets", log.Relinquish());
+		loadedLevel.LoadLevel(levelToLoad, "../Assets", log.Relinquish());
 
 		ID3D11Device* creator;
 		d3d.GetDevice((void**)&creator);
