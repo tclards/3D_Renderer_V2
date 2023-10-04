@@ -1,0 +1,8 @@
+﻿<hud name="test hud" width="800" height="600">
+	<element name="HUD_Sharp_backplate" pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.029" sr_x="0"	  sr_y="0"	 sr_w="800" sr_h="600" textureID ="1"/>
+	<element name="Health_left"			pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.028" sr_x="185" sr_y="450" sr_w="615" sr_h="600" textureID ="2"/>
+	<element name="Health_right"		pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.028" sr_x="0"   sr_y="0" 	 sr_w="615" sr_h="600" textureID ="3"/>
+	<element name="Mana_left"			pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.028" sr_x="185" sr_y="450" sr_w="615" sr_h="600" textureID ="4"/>
+	<element name="Mana_right"			pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.028" sr_x="0" sr_y="0" sr_w="615" sr_h="600" textureID ="5"/>	
+	<element name="Center_top"			pos_x="0.0" pos_y="-0.8" scale_x="1.0" scale_y="0.25" rotation="0.0" depth="0.027" sr_x="0"	  sr_y="0"	 sr_w="800" sr_h="600" textureID ="6"/>
+</hud>
