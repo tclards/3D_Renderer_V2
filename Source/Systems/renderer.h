@@ -185,6 +185,7 @@ private:
 	void InitializeWireframeMode(ID3D11Device* creator);
 	void InitializeConstantBufferData();
 	void InitializeConstantBuffers(ID3D11Device* creator);
+	void createConstantBufferSprites(ID3D11Device* creator);
 	void CreateConstantBufferScene(ID3D11Device* creator, const void* data, unsigned int sizeInBytes);
 	void CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned int sizeInBytes);
 	void ReInitializeBuffers(ID3D11Device* creator);
@@ -201,6 +202,7 @@ private:
 	void InitializeCameraMatrix();
 	void InitializeViewMatrix();
 	void InitializeMatricesAndVariables();
+	void InitializePipeline(ID3D11Device* creator);
 	void InitializePipeline_2D(ID3D11Device* creator);
 	Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader(ID3D11Device* creator, UINT compilerFlags);
 	Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader(ID3D11Device* creator, UINT compilerFlags);
@@ -218,6 +220,5 @@ private:
 	void SetVertexBuffers(PipelineHandles handles);
 	void SetShaders(PipelineHandles handles);
 	void ReleasePipelineHandles(PipelineHandles toRelease);
-
 };
 #endif

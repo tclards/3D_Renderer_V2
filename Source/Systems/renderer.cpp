@@ -11,8 +11,6 @@ void PrintLabeledDebugString(const char* label, const char* toPrint)
 #endif
 }
 
-using namespace DirectXRendererLogic;
-
 // Globals for Renderer - input bools and 2D render pass/HUD & UI data
 #pragma region Globals
 // Bools for input - splitscreen, level loading, and wireframe mode
@@ -66,7 +64,7 @@ std::wstring texture_names[] =		// example HUD from original implementation
 #pragma endregion
 
 // Constructor
-void Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
+void DirectXRendererLogic::Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 {
 	window = _win;
 	d3dSurface = _d3d;
@@ -77,18 +75,18 @@ void Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	InitializeConstantBufferData();
 	IntializeGraphics();
 
-	inputProxy.Create(win);
+	inputProxy.Create(window);
 	controllerInputProxy.Create();
 }
 
 // Shutdown Function to release resources - TODO
-bool Shutdown()
+bool DirectXRendererLogic::Shutdown()
 {
 	return true; // !
 }
 
 // Level Loading
-void loadLevel()
+void DirectXRendererLogic::loadLevel()
 {
 	const char* levelToLoad = levels[levelIndex];
 
@@ -101,7 +99,7 @@ void loadLevel()
 	loadedLevel.LoadLevel(levelToLoad, "../../Assets/Level_Assets", log.Relinquish());
 
 	ID3D11Device* creator;
-	d3d.GetDevice((void**)&creator);
+	d3dSurface.GetDevice((void**)&creator);
 	ReInitializeBuffers(creator);
 	InitializeConstantBufferData();
 	cbuffMesh.Reset();
@@ -124,7 +122,7 @@ void loadLevel()
 // Helper Functions for intializing renderer and creating required components
 #pragma region Helpers
 // 2D Helpers
-std::vector<Sprite> LoadHudFromXML(std::string filepath)
+std::vector<Sprite> DirectXRendererLogic::LoadHudFromXML(std::string filepath)
 {
 	std::vector<Sprite> result;
 
@@ -173,7 +171,7 @@ std::vector<Sprite> LoadHudFromXML(std::string filepath)
 	}
 	return result;
 }
-void loadHUD()
+void DirectXRendererLogic::loadHUD()
 {
 	// load a hud.xml file that contains all of the hud information
 	// [sprite data]
@@ -190,7 +188,7 @@ void loadHUD()
 	// sort the hud from furthest to closest
 	std::sort(hud.begin(), hud.end(), sortfunc);
 }
-SpriteData UpdateSpriteConstantBufferData(const Sprite& s)
+DirectXRendererLogic::SpriteData DirectXRendererLogic::UpdateSpriteConstantBufferData(const Sprite& s)
 {
 	SpriteData temp = { 0 };
 	temp.pos_scale.x = s.GetPosition().x;
@@ -201,7 +199,7 @@ SpriteData UpdateSpriteConstantBufferData(const Sprite& s)
 	temp.rotation_depth.y = s.GetDepth();
 	return temp;
 }
-SpriteData UpdateTextConstantBufferData(const Text& s)
+DirectXRendererLogic::SpriteData DirectXRendererLogic::UpdateTextConstantBufferData(const Text& s)
 {
 	SpriteData temp = { 0 };
 	temp.pos_scale.x = s.GetPosition().x;
@@ -213,7 +211,7 @@ SpriteData UpdateTextConstantBufferData(const Text& s)
 	return temp;
 }
 // Graphics and Sound
-void IntializeGraphics()
+void DirectXRendererLogic::IntializeGraphics()
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -231,7 +229,7 @@ void IntializeGraphics()
 	creator->Release();
 }
 // WireFrame Rendering Mode Raster state
-void InitializeWireframeMode(ID3D11Device* creator)
+void DirectXRendererLogic::InitializeWireframeMode(ID3D11Device* creator)
 {
 	ZeroMemory(&wfdesc, sizeof(D3D11_RASTERIZER_DESC));
 	wfdesc.FillMode = D3D11_FILL_WIREFRAME;
@@ -239,7 +237,7 @@ void InitializeWireframeMode(ID3D11Device* creator)
 	hr_wireframe = creator->CreateRasterizerState(&wfdesc, &WireFrame);
 }
 // Scene and Mesh Constant Buffers
-void InitializeConstantBufferData()
+void DirectXRendererLogic::InitializeConstantBufferData()
 {
 	cbuffSceneData.projMat = projectionMat;
 	cbuffSceneData.viewMat = viewMat;
@@ -247,27 +245,27 @@ void InitializeConstantBufferData()
 	cbuffSceneData.lightColor = lightColor;
 	cbuffSceneData.sunAmbient = sunAmbient;
 }
-void InitializeConstantBuffers(ID3D11Device* creator)
+void DirectXRendererLogic::InitializeConstantBuffers(ID3D11Device* creator)
 {
 	CreateConstantBufferScene(creator, &cbuffSceneData, sizeof(cbuffSceneData));
 	CreateConstantBufferMesh(creator, &cbuffMeshData, sizeof(cbuffMeshData));
 	createConstantBufferSprites(creator);
 }
-void createConstantBufferSprites(ID3D11Device* creator)
+void DirectXRendererLogic::createConstantBufferSprites(ID3D11Device* creator)
 {
 	D3D11_SUBRESOURCE_DATA cbData = { &constantBufferSpriteData, 0, 0 };
 
 	CD3D11_BUFFER_DESC cbDesc(sizeof(constantBufferSpriteData), D3D11_BIND_CONSTANT_BUFFER);
 	creator->CreateBuffer(&cbDesc, &cbData, cbuffSprite.GetAddressOf());
 }
-void CreateConstantBufferScene(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+void DirectXRendererLogic::CreateConstantBufferScene(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
 {
 	D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
 	CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 	creator->CreateBuffer(&bDesc, &bData, cbuffScene.GetAddressOf());
 }
-void CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+void DirectXRendererLogic::CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
 {
 	D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
 	CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -275,44 +273,44 @@ void CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned 
 	creator->CreateBuffer(&bDesc, &bData, cbuffMesh.GetAddressOf());
 }
 // Index Buffer
-void InitializeIndexBuffer(ID3D11Device* creator)
+void DirectXRendererLogic::InitializeIndexBuffer(ID3D11Device* creator)
 {
 	CreateIndexBuffer(creator, loadedLevel.levelIndices.data(), sizeof(unsigned int) * loadedLevel.levelIndices.size());
 	CreateIndexBuffer2D(creator);
 }
-void CreateIndexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+void DirectXRendererLogic::CreateIndexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
 {
 	D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
 	CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_INDEX_BUFFER);
 
 	creator->CreateBuffer(&bDesc, &bData, &indexBuffer);
 }
-void CreateIndexBuffer2D(ID3D11Device* creator)
+void DirectXRendererLogic::CreateIndexBuffer2D(ID3D11Device* creator)
 {
 	D3D11_SUBRESOURCE_DATA ibData = { indices, 0, 0 };
 	CD3D11_BUFFER_DESC ibDesc(sizeof(indices), D3D11_BIND_INDEX_BUFFER);
 	creator->CreateBuffer(&ibDesc, &ibData, indexBuffer_2D.GetAddressOf());
 }
 // Vertex Buffer
-void InitializeVertexBuffer(ID3D11Device* creator)
+void DirectXRendererLogic::InitializeVertexBuffer(ID3D11Device* creator)
 {
 	CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
 	CreateVertexBuffer2D(creator);
 }
-void CreateVertexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+void DirectXRendererLogic::CreateVertexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
 {
 	D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
 	CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_VERTEX_BUFFER);
 	creator->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
 }
-void CreateVertexBuffer2D(ID3D11Device* creator)
+void DirectXRendererLogic::CreateVertexBuffer2D(ID3D11Device* creator)
 {
 	D3D11_SUBRESOURCE_DATA vbData = { verts, 0, 0 };
 	CD3D11_BUFFER_DESC vbDesc(sizeof(verts), D3D11_BIND_VERTEX_BUFFER);
 	creator->CreateBuffer(&vbDesc, &vbData, vertexBuffer_2D.GetAddressOf());
 }
 // Text and Font Helpers
-void InitializeTextandFont()
+void DirectXRendererLogic::InitializeTextandFont()
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -363,7 +361,7 @@ void InitializeTextandFont()
 	creator->Release();
 }
 // Reinitialize Buffers - helper function for use in level loading
-void ReInitializeBuffers(ID3D11Device* creator)
+void DirectXRendererLogic::ReInitializeBuffers(ID3D11Device* creator)
 {
 	indexBuffer.Reset();
 	vertexBuffer.Reset();
@@ -371,13 +369,13 @@ void ReInitializeBuffers(ID3D11Device* creator)
 	CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
 }
 // Initialize Matrices
-void InitializeWorldMatrix()
+void DirectXRendererLogic::InitializeWorldMatrix()
 {
 	GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
 
 	worldMat = tempMat;
 }
-void InitializePerspectiveMatrix()
+void DirectXRendererLogic::InitializePerspectiveMatrix()
 {
 	GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
 
@@ -390,7 +388,7 @@ void InitializePerspectiveMatrix()
 
 	perspectiveMat = tempMat;
 }
-void InitializeOrthographicMatrix()
+void DirectXRendererLogic::InitializeOrthographicMatrix()
 {
 	GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
 
@@ -408,7 +406,7 @@ void InitializeOrthographicMatrix()
 
 	orthographicMat = tempMat;
 }
-void InitializeCameraMatrix()
+void DirectXRendererLogic::InitializeCameraMatrix()
 {
 	GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
 
@@ -417,33 +415,15 @@ void InitializeCameraMatrix()
 
 	camMatrix = tempMat;
 }
-void InitializeViewMatrix()
+void DirectXRendererLogic::InitializeViewMatrix()
 {
 	// place viewMat at player position
-	GW::MATH::GMATRIXF tempMat = submarinePOS;
-
-	// Get translation vector for submarine and adjust upwards slightly
-	GW::MATH::GVECTORF lookAtMe;
-	GW::MATH::GMatrix::GetTranslationF(submarinePOS, lookAtMe);
-	lookAtMe.y += 3.0f;
-
-	// look at player submarine object from a small distance away
-	GW::MATH::GVECTORF at = lookAtMe;
-	GW::MATH::GVECTORF eye =
-	{
-		7.0f, 3.0f, 0.0f, 0.0f
-	};
-	GW::MATH::GVECTORF up =
-	{
-		0.0f, 1.0f, 0.0f, 0.0f
-	};
-
-	GW::MATH::GMatrix::LookAtLHF(eye, at, up, tempMat);
+	GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
 
 	viewMat = tempMat;
 }
 // General Catch all helper that calls many of the above functions
-void InitializeMatricesAndVariables()
+void DirectXRendererLogic::InitializeMatricesAndVariables()
 {
 	// initialize matrices
 	InitializeWorldMatrix();
@@ -476,7 +456,7 @@ void InitializeMatricesAndVariables()
 	};
 }
 // Pipeline Initialization
-void InitializePipeline(ID3D11Device* creator)
+void DirectXRendererLogic::InitializePipeline(ID3D11Device* creator)
 {
 	UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if _DEBUG
@@ -493,7 +473,7 @@ void InitializePipeline(ID3D11Device* creator)
 
 	CreateVertexInputLayout_2D(creator, vsBlob_2D);
 }
-void InitializePipeline_2D(ID3D11Device* creator)
+void DirectXRendererLogic::InitializePipeline_2D(ID3D11Device* creator)
 {
 	UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if _DEBUG
@@ -505,7 +485,7 @@ void InitializePipeline_2D(ID3D11Device* creator)
 	CreateVertexInputLayout_2D(creator, vsBlob_2D);
 }
 // Shaders
-Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader(ID3D11Device* creator, UINT compilerFlags)
+Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader(ID3D11Device* creator, UINT compilerFlags)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
 
@@ -528,7 +508,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader(ID3D11Device* creator, UINT
 
 	return vsBlob;
 }
-Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader(ID3D11Device* creator, UINT compilerFlags)
+Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompilePixelShader(ID3D11Device* creator, UINT compilerFlags)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
 
@@ -551,7 +531,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader(ID3D11Device* creator, UINT 
 
 	return psBlob;
 }
-Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader_2D(ID3D11Device* creator, UINT compilerFlags)
+Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader_2D(ID3D11Device* creator, UINT compilerFlags)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
 
@@ -574,7 +554,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader_2D(ID3D11Device* creator, U
 
 	return vsBlob;
 }
-Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader_2D(ID3D11Device* creator, UINT compilerFlags)
+Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompilePixelShader_2D(ID3D11Device* creator, UINT compilerFlags)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
 
@@ -598,7 +578,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader_2D(ID3D11Device* creator, UI
 	return psBlob;
 }
 // Vertex Layout
-void CreateVertexInputLayout(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
+void DirectXRendererLogic::CreateVertexInputLayout(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
 {
 	D3D11_INPUT_ELEMENT_DESC attributes[3];
 
@@ -630,7 +610,7 @@ void CreateVertexInputLayout(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DB
 		vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 		vertexFormat.GetAddressOf());
 }
-void CreateVertexInputLayout_2D(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
+void DirectXRendererLogic::CreateVertexInputLayout_2D(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
 {
 	D3D11_INPUT_ELEMENT_DESC format[] =
 	{
@@ -643,7 +623,7 @@ void CreateVertexInputLayout_2D(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID
 		vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 		vertexFormat_2D.GetAddressOf());
 }
-void CreateBlendState(ID3D11Device* creator)
+void DirectXRendererLogic::CreateBlendState(ID3D11Device* creator)
 {
 	// this is used to alpha blend objects with transparency
 	CD3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC(CD3D11_DEFAULT());
@@ -655,14 +635,14 @@ void CreateBlendState(ID3D11Device* creator)
 	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	creator->CreateBlendState(&blendDesc, blendState_2D.GetAddressOf());
 }
-void CreateDepthStencilDesc(ID3D11Device* creator)
+void DirectXRendererLogic::CreateDepthStencilDesc(ID3D11Device* creator)
 {
 	// the depth function needs to be set to less_equal instead of less
 	CD3D11_DEPTH_STENCIL_DESC depthStencilDesc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
 	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	creator->CreateDepthStencilState(&depthStencilDesc, depthStencilState_2D.GetAddressOf());
 }
-void CreateRasterState_2D(ID3D11Device* creator)
+void DirectXRendererLogic::CreateRasterState_2D(ID3D11Device* creator)
 {
 	CD3D11_RASTERIZER_DESC rasterizerDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
 	rasterizerDesc.ScissorEnable = true;
@@ -671,7 +651,7 @@ void CreateRasterState_2D(ID3D11Device* creator)
 #pragma endregion
 
 // UI loading function for sprites
-void loadSprites(ID3D11Device* creator)
+void DirectXRendererLogic::loadSprites(ID3D11Device* creator)
 {
 	for (size_t i = 0; i < ARRAYSIZE(texture_names); i++)
 	{
@@ -688,7 +668,7 @@ void loadSprites(ID3D11Device* creator)
 
 // Initializes renderer - 
 // loads level to render, loads sprite data, font data, and hud data, then initializes the matrices and required variables, sets up the cbuffers, and initializes the graphics systems
-void InitializeAll()
+void DirectXRendererLogic::InitializeAll()
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -704,7 +684,7 @@ void InitializeAll()
 }
 
 // Rendering/Drawing Function - called each frame
-void Render()
+void DirectXRendererLogic::Render()
 {
 	PipelineHandles curHandles = GetCurrentPipelineHandles();
 	SetUpPipeline(curHandles);
@@ -861,7 +841,7 @@ void Render()
 }
 
 // 2D Rendering/Drawing Function - called each frame
-void Render2D()
+void DirectXRendererLogic::Render2D()
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -880,8 +860,8 @@ void Render2D()
 	d3dSurface.GetDepthStencilView((void**)&depth);
 
 	// setting up the static text object with information
-		// keep in mind the position will always be the center of the text
-		// only update things that need to be changed between levels
+	// keep in mind the position will always be the center of the text
+	// only update things that need to be changed between levels
 	staticText.SetText("Score");
 	staticText.SetPosition(0.0f, -0.82f);
 	staticText.SetScale(0.5f, 0.5f);
@@ -898,7 +878,7 @@ void Render2D()
 	creator->CreateBuffer(&svbDesc, &svbData, vertexBufferStaticText.GetAddressOf());
 
 	// update the dynamic text so we create the vertices
-	dynamicText.SetText(std::to_string(currentScore));
+	dynamicText.SetText(std::to_string(0));
 	dynamicText.Update(screenWidth, screenHeight);
 
 	// upload the new information to the vertex buffer using map / unmap
@@ -986,7 +966,7 @@ void Render2D()
 }
 
 // Update Function - called each frame
-void Update()
+void DirectXRendererLogic::Update()
 {
 	ID3D11DeviceContext* con = nullptr;
 	d3dSurface.GetImmediateContext((void**)&con);
@@ -1457,7 +1437,7 @@ void Update()
 
 // Helper functions for setting up and using raster pipeline
 #pragma region Pipeline Helper Functions
-PipelineHandles GetCurrentPipelineHandles()
+DirectXRendererLogic::PipelineHandles DirectXRendererLogic::GetCurrentPipelineHandles()
 {
 	PipelineHandles retval;
 	d3dSurface.GetImmediateContext((void**)&retval.context);
@@ -1465,7 +1445,7 @@ PipelineHandles GetCurrentPipelineHandles()
 	d3dSurface.GetDepthStencilView((void**)&retval.depthStencil);
 	return retval;
 }
-void SetUpPipeline(PipelineHandles& handles)
+void DirectXRendererLogic::SetUpPipeline(PipelineHandles& handles)
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -1488,7 +1468,7 @@ void SetUpPipeline(PipelineHandles& handles)
 
 	creator->Release();
 }
-void SetUpPipeline_2D(PipelineHandles& handles)
+void DirectXRendererLogic::SetUpPipeline_2D(PipelineHandles& handles)
 {
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -1511,25 +1491,25 @@ void SetUpPipeline_2D(PipelineHandles& handles)
 
 	creator->Release();
 }
-void SetRenderTargets(PipelineHandles handles)
+void DirectXRendererLogic::SetRenderTargets(PipelineHandles handles)
 {
 	ID3D11RenderTargetView* const views[] = { handles.targetView };
 	handles.context->OMSetRenderTargets(ARRAYSIZE(views), views, handles.depthStencil);
 
 }
-void SetVertexBuffers(PipelineHandles handles)
+void DirectXRendererLogic::SetVertexBuffers(PipelineHandles handles)
 {
 	const UINT strides[] = { sizeof(OBJ_VERT) };
 	const UINT offsets[] = { 0 };
 	ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
 	handles.context->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
 }
-void SetShaders(PipelineHandles handles)
+void DirectXRendererLogic::SetShaders(PipelineHandles handles)
 {
 	handles.context->VSSetShader(vertexShader.Get(), nullptr, 0);
 	handles.context->PSSetShader(pixelShader.Get(), nullptr, 0);
 }
-void ReleasePipelineHandles(PipelineHandles toRelease)
+void DirectXRendererLogic::ReleasePipelineHandles(PipelineHandles toRelease)
 {
 	toRelease.depthStencil->Release();
 	toRelease.targetView->Release();
