@@ -2,9 +2,6 @@
 #ifndef DIRECTXRENDERERLOGIC_H
 #define DIRECTXRENDERERLOGIC_H
 
-#include <d3dcompiler.h>	// required for compiling shaders on the fly, consider pre-compiling instead
-#pragma comment(lib, "d3dcompiler.lib") 
-
 /*
 Debug Keys:
 Num Pad 1 - Toggle Debug Free Cams
