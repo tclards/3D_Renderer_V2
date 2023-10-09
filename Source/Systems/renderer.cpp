@@ -228,6 +228,13 @@ void DirectXRendererLogic::IntializeGraphics()
 	// free temporary handle
 	creator->Release();
 }
+void DirectXRendererLogic::InitializeSound()
+{
+	audioPlayer.Create();
+
+	loadingFX.Create(loadingSound, audioPlayer, 0.1f);
+	music.Create(backgroundMusic, audioPlayer, 0.2f);
+}
 // WireFrame Rendering Mode Raster state
 void DirectXRendererLogic::InitializeWireframeMode(ID3D11Device* creator)
 {
