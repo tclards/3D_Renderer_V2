@@ -2,6 +2,10 @@
 #ifndef DIRECTXRENDERERLOGIC_H
 #define DIRECTXRENDERERLOGIC_H
 
+#define TEXTURES_PATH "../Textures/"
+#define LTEXTURES_PATH L"../Textures/"
+#define XML_PATH "../XML/"
+
 /*
 Debug Keys:
 Num Pad 1 - Toggle Debug Free Cams
