@@ -64,7 +64,7 @@ std::wstring texture_names[] =		// example HUD from original implementation
 #pragma endregion
 
 // Constructor
-void DirectXRendererLogic::Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
+DirectXRendererLogic::DirectXRendererLogic(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 {
 	window = _win;
 	d3dSurface = _d3d;

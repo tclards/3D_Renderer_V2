@@ -4,6 +4,7 @@
 
 // This reads .h2b files which are optimized binary .obj+.mtl files
 #include "h2bParser.h"
+#include "../../gateware-main/Gateware.h"
 
 class Level_Data {
 

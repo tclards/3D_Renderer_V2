@@ -140,10 +140,6 @@ class DirectXRendererLogic
 	// User Input 
 	GW::INPUT::GInput									inputProxy;
 	GW::INPUT::GController								controllerInputProxy;
-	// WireFrame Debug Mode
-	ID3D11RasterizerState* WireFrame;
-	D3D11_RASTERIZER_DESC								wfdesc;
-	HRESULT												hr_wireframe;
 	// Shader Paths
 	std::string											vertexShaderSource;
 	std::string											pixelShaderSource;
@@ -162,16 +158,16 @@ class DirectXRendererLogic
 	GW::AUDIO::GMusic music;
 	const char* loadingSound = "../SoundFX/loadingFX.wav";
 	const char* backgroundMusic = "../SoundFX/music.wav";
-	// variables for rendering wireframes
+	// WireFrame Debug Mode
 	ID3D11RasterizerState* WireFrame;
 	D3D11_RASTERIZER_DESC wfdesc;
-	HRESULT hr;
+	HRESULT												hr_wireframe;
 	bool wireFrameMode = false;
 	int wireframeInputCounter = 30;
 	bool startWireframeCounter = false;
 public:
 	bool Shutdown();
-	void Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d);
+	DirectXRendererLogic(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d);
 	void Update();									// Update Renderer Each Frame				(Called First)
 	void Render();									// Render Pass for 3D						(Called Second)
 	void Render2D();								// Render Pass for 2D						(Called Third)
