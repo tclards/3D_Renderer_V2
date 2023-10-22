@@ -2,15 +2,10 @@
 #include "../Utils/load_data_oriented.h"
 #pragma comment(lib, "d3dcompiler.lib") 
 
-void PrintLabeledDebugString(const char* label, const char* toPrint)
-{
-	std::cout << label << toPrint << std::endl;
-#if defined WIN32 //OutputDebugStringA is a windows-only function 
-	OutputDebugStringA(label);
-	OutputDebugStringA(toPrint);
-#endif
-}
+// TODO
+// fix memory leaks with d3d11debug
 
+#pragma region STRUCTS
 __declspec(align(16)) struct SceneData
 {
 	GW::MATH::GMATRIXF viewMat, projMat;
@@ -35,70 +30,93 @@ typedef struct _OBJ_VERT_
 	OBJ_VEC3 nrm; // Provided direct from obj file, may or may not be normalized.
 }OBJ_VERT;
 
+struct PipelineHandles
+{
+	ID3D11DeviceContext* context;
+	ID3D11RenderTargetView* targetView;
+	ID3D11DepthStencilView* depthStencil;
+};
+#pragma endregion
+
+#pragma region GLOBALS
+// Splitscreen
+bool splitScreen = false;
+bool startCounter = false;
+int splitCounter = 30;
+
+// Wireframe
+bool wireFrameMode = false;
+int wireframeInputCounter = 30;
+bool startWireframeCounter = false;
+
+// Orthographic
+bool orthoMode = false;
+bool startOrthoCounter = false;
+int orthoCounter = 30;
+
+// Level File Paths and Array
+const char* level_00 = "../Levels/GameLevel.txt";
+const char* level_01 = "../Levels/GameLevelTest.txt";
+const char* levels[2] = { level_00, level_01 };
+int levelIndex = 0;
+
+// Audio & SoundFX File Paths
+const char* loadingSound = "../SoundFX/loadingFX.wav";
+const char* backgroundMusic = "../SoundFX/music.wav";
+#pragma endregion
+
 // Creation, Rendering & Cleanup
 class Renderer
 {
+	// Important Variables & Containers
+#pragma region Variables & Containers
 	// proxy handles
-	GW::SYSTEM::GWindow win;
-	GW::GRAPHICS::GDirectX11Surface d3d;
-	
+	GW::SYSTEM::GWindow							win;
+	GW::GRAPHICS::GDirectX11Surface				d3d;
+
 	// scene data for the level(s)
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
-
-	GW::MATH::GMATRIXF worldMat;
-	GW::MATH::GMATRIXF FSLogo_WorldMat;
-	GW::MATH::GMATRIXF FSLogo_Text_WorldMat;
-	GW::MATH::GMATRIXF viewMat;
-	GW::MATH::GMATRIXF perspectiveMat;
-	GW::MATH::GMATRIXF orthographicMat;
-	GW::MATH::GMATRIXF camMatrix;
-
-	GW::MATH::GVECTORF lightDir;
-	GW::MATH::GVECTORF lightColor;
-	GW::MATH::GVECTORF sunAmbient;
-
-	SceneData cbuffSceneData;
-	MeshData cbuffMeshData;
-
-	Microsoft::WRL::ComPtr<ID3D11Buffer> cbuffScene;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> cbuffMesh;
+	GW::MATH::GMATRIXF							worldMat;
+	GW::MATH::GMATRIXF							viewMat;
+	GW::MATH::GMATRIXF							projectionMat;
+	GW::MATH::GMATRIXF							perspectiveMat; // to be assigned to projectionMat as needed
+	GW::MATH::GMATRIXF							orthographicMat; // to be assigned to projectionMat as needed (When orthographic mode is enabled)
+	GW::MATH::GMATRIXF							camMatrix;
+	GW::MATH::GVECTORF							lightDir;
+	GW::MATH::GVECTORF							lightColor;
+	GW::MATH::GVECTORF							sunAmbient;
+	SceneData									cbuffSceneData;
+	MeshData									cbuffMeshData;
+	Microsoft::WRL::ComPtr<ID3D11Buffer>		cbuffScene;
+	Microsoft::WRL::ComPtr<ID3D11Buffer>		cbuffMesh;
 
 	// input 
-	GW::INPUT::GInput inputProxy;
-	GW::INPUT::GController controllerInputProxy;
-	bool splitScreen = false;
-	bool startCounter = false;
-	int splitCounter = 30;
+	GW::INPUT::GInput							inputProxy;
+	GW::INPUT::GController						controllerInputProxy;
 
 	// load level data
-	GW::SYSTEM::GLog log;
-	Level_Data loadedLevel;
-	const char* level_00 = "../Levels/GameLevel.txt";
-	const char* level_01 = "../Levels/GameLevelTest.txt";
-	const char* levels[2] = { level_00, level_01 };
-	int levelIndex = 0;
+	GW::SYSTEM::GLog							log;
+	Level_Data									loadedLevel;
 
 	// music and audioFX data
-	GW::AUDIO::GAudio audioPlayer;
-	GW::AUDIO::GSound loadingFX;
-	GW::AUDIO::GMusic music;
-
-	const char* loadingSound = "../SoundFX/loadingFX.wav";
-	const char* backgroundMusic = "../SoundFX/music.wav";
+	GW::AUDIO::GAudio							audioPlayer;
+	GW::AUDIO::GSound							loadingFX;
+	GW::AUDIO::GMusic							music;
 
 	// variables for rendering wireframes
 	ID3D11RasterizerState* WireFrame;
-	D3D11_RASTERIZER_DESC wfdesc;
-	HRESULT hr;
-	bool wireFrameMode = false;
-	int wireframeInputCounter = 30;
-	bool startWireframeCounter = false; 
+	D3D11_RASTERIZER_DESC						wfdesc;
+	HRESULT										hr;
+#pragma endregion
 
 public:
+	// Public Functions
+#pragma region Public Functions
+	// Constructor
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
 		win = _win;
@@ -114,374 +132,7 @@ public:
 		controllerInputProxy.Create();
 	}
 
-private:
-	//constructor helper functions
-	void IntializeGraphics()
-	{
-		ID3D11Device* creator;
-		d3d.GetDevice((void**)&creator);
-
-		InitializeVertexBuffer(creator);
-		InitializeIndexBuffer(creator);
-		InitializeConstantBuffers(creator);
-		InitializePipeline(creator);
-		InitializeWireframeMode(creator);
-
-		// free temporary handle
-		creator->Release();
-	}
-
-	void InitializeSound()
-	{
-		audioPlayer.Create();
-
-		loadingFX.Create(loadingSound, audioPlayer, 0.1f);
-		music.Create(backgroundMusic, audioPlayer, 0.2f);
-	}
-
-	void InitializeWireframeMode(ID3D11Device* creator)
-	{
-		ZeroMemory(&wfdesc, sizeof(D3D11_RASTERIZER_DESC));
-		wfdesc.FillMode = D3D11_FILL_WIREFRAME;
-		wfdesc.CullMode = D3D11_CULL_NONE;
-		hr = creator->CreateRasterizerState(&wfdesc, &WireFrame);
-	}
-
-	void loadLevel()
-	{
-		const char* levelToLoad = levels[levelIndex];
-
-		// begin loading level
-		log.Create("../LevelLoaderLog.txt");
-		log.EnableConsoleLogging(true); // mirror output to the console
-		log.Log("Start Program.");
-
-		loadedLevel.UnloadLevel();
-		loadedLevel.LoadLevel(levelToLoad, "../Assets", log.Relinquish());
-
-		ID3D11Device* creator;
-		d3d.GetDevice((void**)&creator);
-		ReInitializeBuffers(creator);
-		InitializeConstantBufferData();
-		cbuffMesh.Reset();
-		cbuffScene.Reset();
-		InitializeConstantBuffers(creator);
-
-		bool isPlayingFX;
-		loadingFX.isPlaying(isPlayingFX);
-		if (isPlayingFX == false)
-		{
-			loadingFX.Play();
-		}
-		else if (isPlayingFX == true)
-		{
-			loadingFX.Stop();
-			loadingFX.Play();
-		}
-	}
-
-	void InitializeConstantBufferData()
-	{
-		cbuffSceneData.projMat = perspectiveMat;
-		cbuffSceneData.viewMat = viewMat;
-		cbuffSceneData.lightDir = lightDir;
-		cbuffSceneData.lightColor = lightColor;
-		cbuffSceneData.sunAmbient = sunAmbient;
-	}
-
-	void InitializeConstantBuffers(ID3D11Device* creator)
-	{
-		CreateConstantBufferScene(creator, &cbuffSceneData, sizeof(cbuffSceneData));
-		CreateConstantBufferMesh(creator, &cbuffMeshData, sizeof(cbuffMeshData));
-	}
-
-	void CreateConstantBufferScene(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
-	{
-		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-
-		creator->CreateBuffer(&bDesc, &bData, cbuffScene.GetAddressOf());
-	}
-	void CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
-	{
-		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-
-		creator->CreateBuffer(&bDesc, &bData, cbuffMesh.GetAddressOf());
-	}
-
-	void ReInitializeBuffers(ID3D11Device* creator)
-	{
-		indexBuffer.Reset();
-		vertexBuffer.Reset();
-		CreateIndexBuffer(creator, loadedLevel.levelIndices.data(), sizeof(unsigned int) * loadedLevel.levelIndices.size());
-		CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
-	}
-
-	void InitializeIndexBuffer(ID3D11Device* creator)
-	{
-		CreateIndexBuffer(creator, loadedLevel.levelIndices.data(), sizeof(unsigned int) * loadedLevel.levelIndices.size());
-	}
-
-	void CreateIndexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
-	{
-		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_INDEX_BUFFER);
-
-		creator->CreateBuffer(&bDesc, &bData, &indexBuffer);
-	}
-
-	void InitializeVertexBuffer(ID3D11Device* creator)
-	{
-		CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
-	}
-
-	void CreateVertexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
-	{
-		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_VERTEX_BUFFER);
-		creator->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
-	}
-
-	void InitializeWorldMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		worldMat = tempMat;
-	}
-
-	void InitializeFSLogoWorldMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		FSLogo_WorldMat = tempMat;
-	}
-
-	void InitializeFSLogoTextWorldMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		FSLogo_Text_WorldMat = tempMat;
-	}
-
-	void InitializePerspectiveMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		float aspect = 0.0f;
-		d3d.GetAspectRatio(aspect);
-
-		float fov = G_DEGREE_TO_RADIAN_F(65.0f);
-
-		GW::MATH::GMatrix::ProjectionDirectXLHF(fov, aspect, 0.1f, 100.0f, tempMat);
-
-		perspectiveMat = tempMat;
-	}
-
-	void InitializeOrthographicMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		float fLeft = -5.0f;
-		float fRight = 5.0f;
-		float fBottom = -5.0f;
-		float fTop = 5.0f;
-		float fNear = -5.0f;
-		float fFar = 5.0f;
-
-		float mid_x = (fLeft + fRight) / 2;
-		float mid_y = (fBottom + fTop) / 2;
-		float mid_z = (-fNear + -fFar) / 2;
-
-		GW::MATH::GMATRIXF centerOnOrigin = GW::MATH::GIdentityMatrixF;
-		centerOnOrigin.row1 = { 1, 0, 0, -mid_x };
-		centerOnOrigin.row2 = { 0, 1, 0, -mid_y };
-		centerOnOrigin.row3 = { 0, 0, 1, -mid_z };
-		centerOnOrigin.row4 = { 0, 0, 0, 1 };
-
-		float scale_x = 2.0 / (fRight - fLeft);
-		float scale_y = 2.0 / (fTop - fBottom);
-		float scale_z = 2.0 / (fFar - fNear);
-
-		GW::MATH::GMATRIXF scaleViewingVolume = GW::MATH::GIdentityMatrixF;
-		scaleViewingVolume.row1 = { scale_x, 0, 0, 0 };
-		scaleViewingVolume.row2 = { 0, scale_y, 0, 0 };
-		scaleViewingVolume.row3 = { 0, 0, scale_z, 0 };
-		scaleViewingVolume.row4 = { 0, 0, 0, 1 };
-
-		tempMat.row1 = { 2 / (fRight - fLeft), 0, 0, -(fRight + fLeft) / (fRight - fLeft) };
-		tempMat.row2 = { 0, 2 / (fTop - fBottom), 0, -(fTop + fBottom) / (fTop - fBottom) };
-		tempMat.row3 = { 0, 0, -2 / (fFar - fNear) , -(fFar + fNear) / (fFar - fNear) };
-		tempMat.row4 = { 0, 0, 0, 1 };
-
-		orthographicMat = tempMat;
-		/*perspectiveMat = orthographicMat;*/
-	}
-
-	void InitializeCameraMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		// inverse view into cam
-		GW::MATH::GMatrix::InverseF(viewMat, tempMat);
-
-		camMatrix = tempMat;
-	}
-
-	void InitializeViewMatrix()
-	{
-		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
-
-		GW::MATH::GVECTORF eye =
-		{
-			0.75f, 0.25f, -1.5f, 1.0f
-		};
-
-		GW::MATH::GVECTORF at =
-		{
-			0.15f, 0.75f, 0.0f, 1.0f
-		};
-		GW::MATH::GVECTORF up =
-		{
-			0.0f, 1.0f, 0.0f, 0.0f
-		};
-
-		GW::MATH::GMatrix::LookAtLHF(eye, at, up, tempMat);
-
-		viewMat = tempMat;
-	}
-
-	void InitializeMatricesAndVariables()
-	{
-		// initialize matrices
-		InitializeWorldMatrix();
-		InitializeViewMatrix();
-		InitializePerspectiveMatrix();
-		InitializeOrthographicMatrix();
-		InitializeFSLogoWorldMatrix();
-		InitializeFSLogoTextWorldMatrix();
-		InitializeCameraMatrix();
-
-		// initialize variables
-		lightDir =
-		{
-			-1.0f, -1.0f, 2.0f, 1
-		};
-		GW::MATH::GVector::NormalizeF(lightDir, lightDir);
-		lightColor =
-		{
-			229.0f / 255.0f,
-			229.0f / 255.0f,
-			255.0f / 255.0f,
-			255.0f / 255.0f
-		};
-		sunAmbient =
-		{
-			63.75f / 255.0f,
-			63.75f / 255.0f,
-			89.25f / 255.0f,
-			0
-		};
-	}
-
-	void InitializePipeline(ID3D11Device* creator)
-	{
-		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if _DEBUG
-		compilerFlags |= D3DCOMPILE_DEBUG;
-#endif
-		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob = CompileVertexShader(creator, compilerFlags);
-		Microsoft::WRL::ComPtr<ID3DBlob> psBlob = CompilePixelShader(creator, compilerFlags);
-
-		CreateVertexInputLayout(creator, vsBlob);
-	}
-
-	Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader(ID3D11Device* creator, UINT compilerFlags)
-	{
-		std::string vertexShaderSource = ReadFileIntoString("../Shaders/VertexShader.hlsl");
-
-		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
-
-		HRESULT compilationResult =
-			D3DCompile(vertexShaderSource.c_str(), vertexShaderSource.length(),
-				nullptr, nullptr, nullptr, "main", "vs_4_0", compilerFlags, 0,
-				vsBlob.GetAddressOf(), errors.GetAddressOf());
-
-		if (SUCCEEDED(compilationResult))
-		{
-			creator->CreateVertexShader(vsBlob->GetBufferPointer(),
-				vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf());
-		}
-		else
-		{
-			PrintLabeledDebugString("Vertex Shader Errors:\n", (char*)errors->GetBufferPointer());
-			abort();
-			return nullptr;
-		}
-
-		return vsBlob;
-	}
-
-	Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader(ID3D11Device* creator, UINT compilerFlags)
-	{
-		std::string pixelShaderSource = ReadFileIntoString("../Shaders/PixelShader.hlsl");
-
-		Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
-
-		HRESULT compilationResult =
-			D3DCompile(pixelShaderSource.c_str(), pixelShaderSource.length(),
-				nullptr, nullptr, nullptr, "main", "ps_4_0", compilerFlags, 0,
-				psBlob.GetAddressOf(), errors.GetAddressOf());
-
-		if (SUCCEEDED(compilationResult))
-		{
-			creator->CreatePixelShader(psBlob->GetBufferPointer(),
-				psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf());
-		}
-		else
-		{
-			PrintLabeledDebugString("Pixel Shader Errors:\n", (char*)errors->GetBufferPointer());
-			abort();
-			return nullptr;
-		}
-
-		return psBlob;
-	}
-
-	void CreateVertexInputLayout(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
-	{
-		D3D11_INPUT_ELEMENT_DESC attributes[3];
-
-		attributes[0].SemanticName = "POS";
-		attributes[0].SemanticIndex = 0;
-		attributes[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		attributes[0].InputSlot = 0;
-		attributes[0].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		attributes[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		attributes[0].InstanceDataStepRate = 0;
-
-		attributes[1].SemanticName = "UVM";
-		attributes[1].SemanticIndex = 0;
-		attributes[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		attributes[1].InputSlot = 0;
-		attributes[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		attributes[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		attributes[1].InstanceDataStepRate = 0;
-
-		attributes[2].SemanticName = "NRM";
-		attributes[2].SemanticIndex = 0;
-		attributes[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		attributes[2].InputSlot = 0;
-		attributes[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		attributes[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		attributes[2].InstanceDataStepRate = 0;
-
-		creator->CreateInputLayout(attributes, ARRAYSIZE(attributes),
-			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
-			vertexFormat.GetAddressOf());
-	}
-
-public:
+	// Called Each Frame - Renders Scene
 	void Render()
 	{
 		PipelineHandles curHandles = GetCurrentPipelineHandles();
@@ -495,6 +146,7 @@ public:
 		D3D11_MAPPED_SUBRESOURCE sub1 = { 0 };
 		D3D11_MAPPED_SUBRESOURCE sub2 = { 0 };
 
+		// Wireframe Mode
 		if (wireFrameMode == true)
 		{
 			curHandles.context->RSSetState(WireFrame);
@@ -503,6 +155,17 @@ public:
 		{
 			curHandles.context->RSSetState(NULL);
 		}
+
+		// Orthographic mode
+		if (orthoMode == true)
+		{
+			projectionMat = orthographicMat;
+		}
+		else if (orthoMode == false)
+		{
+			projectionMat = perspectiveMat;
+		}
+		cbuffSceneData.projMat = projectionMat;
 
 		// bind scene cbuffer data
 		curHandles.context->Map(cbuffScene.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &sub1);
@@ -619,6 +282,7 @@ public:
 		ReleasePipelineHandles(curHandles);
 	}
 
+	// Called Each Frame - Updates Scene
 	void Update()
 	{
 		// background music
@@ -788,7 +452,7 @@ public:
 		GW::MATH::GMatrix::InverseF(camMatrix, viewMat);
 
 		// Apply changes to constantBuffer
-		cbuffSceneData.viewMat = viewMat; 
+		cbuffSceneData.viewMat = viewMat;
 
 		// splitscreen control
 		float numPad_2_State = 0.0f;
@@ -832,6 +496,48 @@ public:
 				else if (splitScreen == false)
 				{
 					splitScreen = true;
+				}
+			}
+		}
+
+		// orthographic Mode input
+		float numPad_1_State = 0.0f;
+		float dPad_Left_State = 0.0f;
+
+		if (startOrthoCounter == true && orthoCounter > 0)
+		{
+			orthoCounter -= 1;
+		}
+		if (startOrthoCounter == true && orthoCounter <= 0)
+		{
+			orthoCounter = 30;
+			startOrthoCounter = false;
+		}
+		if (startOrthoCounter == false)
+		{
+			if (inputProxy.GetState(G_KEY_NUMPAD_1, numPad_1_State) == GW::GReturn::REDUNDANT)
+			{
+				numPad_1_State = 0.0f;
+				dPad_Left_State = 0.0f;
+			}
+
+			float doTotalOrtho = numPad_1_State + dPad_Left_State;
+
+			if (doTotalOrtho > 0)
+			{
+				numPad_1_State = 0.0f;
+				dPad_Left_State = 0.0f;
+				doTotalOrtho = 0.0f;
+				startOrthoCounter = true;
+				orthoCounter = 30;
+
+				if (orthoMode == true)
+				{
+					orthoMode = false;
+				}
+				else if (orthoMode == false)
+				{
+					orthoMode = true;
 				}
 			}
 		}
@@ -884,14 +590,352 @@ public:
 		}
 	}
 
-private:
-	struct PipelineHandles
+	// Level Loading
+	void loadLevel()
 	{
-		ID3D11DeviceContext* context;
-		ID3D11RenderTargetView* targetView;
-		ID3D11DepthStencilView* depthStencil;
-	};
+		const char* levelToLoad = levels[levelIndex];
 
+		// begin loading level
+		log.Create("../LevelLoaderLog.txt");
+		log.EnableConsoleLogging(true); // mirror output to the console
+		log.Log("Start Program.");
+
+		loadedLevel.UnloadLevel();
+		loadedLevel.LoadLevel(levelToLoad, "../Assets", log.Relinquish());
+
+		ID3D11Device* creator;
+		d3d.GetDevice((void**)&creator);
+		ReInitializeBuffers(creator);
+		InitializeConstantBufferData();
+		cbuffMesh.Reset();
+		cbuffScene.Reset();
+		InitializeConstantBuffers(creator);
+
+		bool isPlayingFX;
+		loadingFX.isPlaying(isPlayingFX);
+		if (isPlayingFX == false)
+		{
+			loadingFX.Play();
+		}
+		else if (isPlayingFX == true)
+		{
+			loadingFX.Stop();
+			loadingFX.Play();
+		}
+	}
+
+	// Deconstructor
+	~Renderer()
+	{
+		// Not much needed here - as most d3d11 objects get released after use	
+	}
+#pragma endregion
+
+private:
+	// Initializer Functions
+#pragma region Initializer Functions
+	// Helper Functions
+	void IntializeGraphics() // Main Initializer
+	{
+		ID3D11Device* creator;
+		d3d.GetDevice((void**)&creator);
+
+		InitializeVertexBuffer(creator);
+		InitializeIndexBuffer(creator);
+		InitializeConstantBuffers(creator);
+		InitializePipeline(creator);
+		InitializeWireframeMode(creator);
+
+		// free temporary handle
+		creator->Release();
+	}
+	void InitializeConstantBuffers(ID3D11Device* creator)
+	{
+		CreateConstantBufferScene(creator, &cbuffSceneData, sizeof(cbuffSceneData));
+		CreateConstantBufferMesh(creator, &cbuffMeshData, sizeof(cbuffMeshData));
+	}
+	void ReInitializeBuffers(ID3D11Device* creator)
+	{
+		indexBuffer.Reset();
+		vertexBuffer.Reset();
+		CreateIndexBuffer(creator, loadedLevel.levelIndices.data(), sizeof(unsigned int) * loadedLevel.levelIndices.size());
+		CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
+	}
+	void InitializeIndexBuffer(ID3D11Device* creator)
+	{
+		CreateIndexBuffer(creator, loadedLevel.levelIndices.data(), sizeof(unsigned int) * loadedLevel.levelIndices.size());
+	}
+	void InitializeVertexBuffer(ID3D11Device* creator)
+	{
+		CreateVertexBuffer(creator, loadedLevel.levelVertices.data(), sizeof(H2B::VERTEX) * loadedLevel.levelVertices.size());
+	}
+	void InitializeMatricesAndVariables()
+	{
+		// initialize matrices
+		InitializeWorldMatrix();
+		InitializeViewMatrix();
+		InitializePerspectiveMatrix();
+		InitializeOrthographicMatrix();
+		InitializeCameraMatrix();
+
+		// initialize variables
+		lightDir =
+		{
+			-1.0f, -1.0f, 2.0f, 1
+		};
+		GW::MATH::GVector::NormalizeF(lightDir, lightDir);
+		lightColor =
+		{
+			229.0f / 255.0f,
+			229.0f / 255.0f,
+			255.0f / 255.0f,
+			255.0f / 255.0f
+		};
+		sunAmbient =
+		{
+			63.75f / 255.0f,
+			63.75f / 255.0f,
+			89.25f / 255.0f,
+			0
+		};
+	}
+
+	// Main Implementations
+	void InitializeSound()
+	{
+		audioPlayer.Create();
+
+		loadingFX.Create(loadingSound, audioPlayer, 0.1f);
+		music.Create(backgroundMusic, audioPlayer, 0.2f);
+	}
+	void InitializeWireframeMode(ID3D11Device* creator)
+	{
+		ZeroMemory(&wfdesc, sizeof(D3D11_RASTERIZER_DESC));
+		wfdesc.FillMode = D3D11_FILL_WIREFRAME;
+		wfdesc.CullMode = D3D11_CULL_NONE;
+		hr = creator->CreateRasterizerState(&wfdesc, &WireFrame);
+	}
+	void InitializeConstantBufferData()
+	{
+		cbuffSceneData.projMat = perspectiveMat;
+		cbuffSceneData.viewMat = viewMat;
+		cbuffSceneData.lightDir = lightDir;
+		cbuffSceneData.lightColor = lightColor;
+		cbuffSceneData.sunAmbient = sunAmbient;
+	}
+	void CreateConstantBufferScene(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+	{
+		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+		creator->CreateBuffer(&bDesc, &bData, cbuffScene.GetAddressOf());
+	}
+	void CreateConstantBufferMesh(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+	{
+		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+		creator->CreateBuffer(&bDesc, &bData, cbuffMesh.GetAddressOf());
+	}
+	void CreateIndexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+	{
+		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_INDEX_BUFFER);
+
+		creator->CreateBuffer(&bDesc, &bData, &indexBuffer);
+	}
+	void CreateVertexBuffer(ID3D11Device* creator, const void* data, unsigned int sizeInBytes)
+	{
+		D3D11_SUBRESOURCE_DATA bData = { data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeInBytes, D3D11_BIND_VERTEX_BUFFER);
+		creator->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
+	}
+	void InitializeWorldMatrix()
+	{
+		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
+
+		worldMat = tempMat;
+	}
+	void InitializePerspectiveMatrix()
+	{
+		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
+
+		float aspect = 0.0f;
+		d3d.GetAspectRatio(aspect);
+
+		float fov = G_DEGREE_TO_RADIAN_F(65.0f);
+
+		GW::MATH::GMatrix::ProjectionDirectXLHF(fov, aspect, 0.1f, 100.0f, tempMat);
+
+		perspectiveMat = tempMat;
+	}
+	void InitializeOrthographicMatrix()
+	{
+		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
+
+		float fLeft = -5.0f;
+		float fRight = 5.0f;
+		float fBottom = -5.0f;
+		float fTop = 5.0f;
+		float fNear = -5.0f;
+		float fFar = 5.0f;
+
+		float mid_x = (fLeft + fRight) / 2;
+		float mid_y = (fBottom + fTop) / 2;
+		float mid_z = (-fNear + -fFar) / 2;
+
+		GW::MATH::GMATRIXF centerOnOrigin = GW::MATH::GIdentityMatrixF;
+		centerOnOrigin.row1 = { 1, 0, 0, -mid_x };
+		centerOnOrigin.row2 = { 0, 1, 0, -mid_y };
+		centerOnOrigin.row3 = { 0, 0, 1, -mid_z };
+		centerOnOrigin.row4 = { 0, 0, 0, 1 };
+
+		float scale_x = 2.0 / (fRight - fLeft);
+		float scale_y = 2.0 / (fTop - fBottom);
+		float scale_z = 2.0 / (fFar - fNear);
+
+		GW::MATH::GMATRIXF scaleViewingVolume = GW::MATH::GIdentityMatrixF;
+		scaleViewingVolume.row1 = { scale_x, 0, 0, 0 };
+		scaleViewingVolume.row2 = { 0, scale_y, 0, 0 };
+		scaleViewingVolume.row3 = { 0, 0, scale_z, 0 };
+		scaleViewingVolume.row4 = { 0, 0, 0, 1 };
+
+		tempMat.row1 = { 2 / (fRight - fLeft), 0, 0, -(fRight + fLeft) / (fRight - fLeft) };
+		tempMat.row2 = { 0, 2 / (fTop - fBottom), 0, -(fTop + fBottom) / (fTop - fBottom) };
+		tempMat.row3 = { 0, 0, -2 / (fFar - fNear) , -(fFar + fNear) / (fFar - fNear) };
+		tempMat.row4 = { 0, 0, 0, 1 };
+
+		orthographicMat = tempMat;
+		/*perspectiveMat = orthographicMat;*/
+	}
+	void InitializeCameraMatrix()
+	{
+		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
+
+		// inverse view into cam
+		GW::MATH::GMatrix::InverseF(viewMat, tempMat);
+
+		camMatrix = tempMat;
+	}
+	void InitializeViewMatrix()
+	{
+		GW::MATH::GMATRIXF tempMat = GW::MATH::GIdentityMatrixF;
+
+		GW::MATH::GVECTORF eye =
+		{
+			0.75f, 0.25f, -1.5f, 1.0f
+		};
+
+		GW::MATH::GVECTORF at =
+		{
+			0.15f, 0.75f, 0.0f, 1.0f
+		};
+		GW::MATH::GVECTORF up =
+		{
+			0.0f, 1.0f, 0.0f, 0.0f
+		};
+
+		GW::MATH::GMatrix::LookAtLHF(eye, at, up, tempMat);
+
+		viewMat = tempMat;
+	}
+	void InitializePipeline(ID3D11Device* creator)
+	{
+		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if _DEBUG
+		compilerFlags |= D3DCOMPILE_DEBUG;
+#endif
+		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob = CompileVertexShader(creator, compilerFlags);
+		Microsoft::WRL::ComPtr<ID3DBlob> psBlob = CompilePixelShader(creator, compilerFlags);
+
+		CreateVertexInputLayout(creator, vsBlob);
+	}
+	Microsoft::WRL::ComPtr<ID3DBlob> CompileVertexShader(ID3D11Device* creator, UINT compilerFlags)
+	{
+		std::string vertexShaderSource = ReadFileIntoString("../Shaders/VertexShader.hlsl");
+
+		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
+
+		HRESULT compilationResult =
+			D3DCompile(vertexShaderSource.c_str(), vertexShaderSource.length(),
+				nullptr, nullptr, nullptr, "main", "vs_4_0", compilerFlags, 0,
+				vsBlob.GetAddressOf(), errors.GetAddressOf());
+
+		if (SUCCEEDED(compilationResult))
+		{
+			creator->CreateVertexShader(vsBlob->GetBufferPointer(),
+				vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf());
+		}
+		else
+		{
+			PrintLabeledDebugString("Vertex Shader Errors:\n", (char*)errors->GetBufferPointer());
+			abort();
+			return nullptr;
+		}
+
+		return vsBlob;
+	}
+	Microsoft::WRL::ComPtr<ID3DBlob> CompilePixelShader(ID3D11Device* creator, UINT compilerFlags)
+	{
+		std::string pixelShaderSource = ReadFileIntoString("../Shaders/PixelShader.hlsl");
+
+		Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
+
+		HRESULT compilationResult =
+			D3DCompile(pixelShaderSource.c_str(), pixelShaderSource.length(),
+				nullptr, nullptr, nullptr, "main", "ps_4_0", compilerFlags, 0,
+				psBlob.GetAddressOf(), errors.GetAddressOf());
+
+		if (SUCCEEDED(compilationResult))
+		{
+			creator->CreatePixelShader(psBlob->GetBufferPointer(),
+				psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf());
+		}
+		else
+		{
+			PrintLabeledDebugString("Pixel Shader Errors:\n", (char*)errors->GetBufferPointer());
+			abort();
+			return nullptr;
+		}
+
+		return psBlob;
+	}
+	void CreateVertexInputLayout(ID3D11Device* creator, Microsoft::WRL::ComPtr<ID3DBlob>& vsBlob)
+	{
+		D3D11_INPUT_ELEMENT_DESC attributes[3];
+
+		attributes[0].SemanticName = "POS";
+		attributes[0].SemanticIndex = 0;
+		attributes[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+		attributes[0].InputSlot = 0;
+		attributes[0].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		attributes[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+		attributes[0].InstanceDataStepRate = 0;
+
+		attributes[1].SemanticName = "UVM";
+		attributes[1].SemanticIndex = 0;
+		attributes[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+		attributes[1].InputSlot = 0;
+		attributes[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		attributes[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+		attributes[1].InstanceDataStepRate = 0;
+
+		attributes[2].SemanticName = "NRM";
+		attributes[2].SemanticIndex = 0;
+		attributes[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+		attributes[2].InputSlot = 0;
+		attributes[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		attributes[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+		attributes[2].InstanceDataStepRate = 0;
+
+		creator->CreateInputLayout(attributes, ARRAYSIZE(attributes),
+			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+			vertexFormat.GetAddressOf());
+	}
+#pragma endregion
+
+	// Pipeline Functions
+#pragma region Pipeline Function
 	PipelineHandles GetCurrentPipelineHandles()
 	{
 		PipelineHandles retval;
@@ -900,7 +944,6 @@ private:
 		d3d.GetDepthStencilView((void**)&retval.depthStencil);
 		return retval;
 	}
-
 	void SetUpPipeline(PipelineHandles handles)
 	{
 		SetRenderTargets(handles);
@@ -917,13 +960,11 @@ private:
 		handles.context->VSSetConstantBuffers(0, 2, constantBuffers);
 		handles.context->PSSetConstantBuffers(0, 2, constantBuffers);
 	}
-
 	void SetRenderTargets(PipelineHandles handles)
 	{
 		ID3D11RenderTargetView* const views[] = { handles.targetView };
 		handles.context->OMSetRenderTargets(ARRAYSIZE(views), views, handles.depthStencil);
 	}
-
 	void SetVertexBuffers(PipelineHandles handles)
 	{
 		const UINT strides[] = { sizeof(OBJ_VERT) };
@@ -931,24 +972,30 @@ private:
 		ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
 		handles.context->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
 	}
-
 	void SetShaders(PipelineHandles handles)
 	{
 		handles.context->VSSetShader(vertexShader.Get(), nullptr, 0);
 		handles.context->PSSetShader(pixelShader.Get(), nullptr, 0);
 	}
-
 	void ReleasePipelineHandles(PipelineHandles toRelease)
 	{
 		toRelease.depthStencil->Release();
 		toRelease.targetView->Release();
 		toRelease.context->Release();
 	}
+#pragma endregion
 
-
-public:
-	~Renderer()
+	// Misc Helper Functions
+#pragma region Helper Functions
+	// Debug Functions
+	void PrintLabeledDebugString(const char* label, const char* toPrint)
 	{
-		// ComPtr will auto release so nothing to do here yet 
+		std::cout << label << toPrint << std::endl;
+#if defined WIN32 //OutputDebugStringA is a windows-only function 
+		OutputDebugStringA(label);
+		OutputDebugStringA(toPrint);
+#endif
 	}
+#pragma endregion
+
 };

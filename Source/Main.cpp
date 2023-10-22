@@ -25,7 +25,8 @@ W/A/S/D - Move Camera
 Mouse - Look Around
 F1 - Load Next Level
 L Sheft/Space - Move up and down
-Num Pad 2 - Toggle Splitscreen
+Num Pad 1 - Toggle Orthographic mode
+Num Pad 2 - Toggle Splitscreen mode
 Num Pad 3 - Toggle WireFrame mode
 
 Controller -
@@ -34,7 +35,8 @@ Left Stick - Move Camera
 Right Stick - Look Around
 Right Bumper - Load Next Level
 Left/Right Trigger - move up and down
-dPad down - Activate or Deactivate Splitscreen
+dPad Left - Toggle Orthographic mode
+dPad down - Toggle Splitscreen mode
 dPad up - Toggle WireFrame mode
 
 */
