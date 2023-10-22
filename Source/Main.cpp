@@ -19,15 +19,19 @@ using namespace GRAPHICS;
 
 /* Controls:
 
+Debug Keys - 
+Num Pad 1 - Toggle Orthographic mode
+Num Pad 2 - Toggle Splitscreen mode
+Num Pad 3 - Toggle WireFrame mode
+Num Pad 7 - Toggle 2D Rendering
+Num Pad 8 - Toggle 3D Rendering
+F1 - Load Next Level
+
 Keyboard -
 Q/E - Rotate Camera Orientation
 W/A/S/D - Move Camera
 Mouse - Look Around
-F1 - Load Next Level
-L Sheft/Space - Move up and down
-Num Pad 1 - Toggle Orthographic mode
-Num Pad 2 - Toggle Splitscreen mode
-Num Pad 3 - Toggle WireFrame mode
+L Shift/Space - Move up and down
 
 Controller -
 A/B - Rotate Camera Orientation
@@ -35,9 +39,6 @@ Left Stick - Move Camera
 Right Stick - Look Around
 Right Bumper - Load Next Level
 Left/Right Trigger - move up and down
-dPad Left - Toggle Orthographic mode
-dPad down - Toggle Splitscreen mode
-dPad up - Toggle WireFrame mode
 
 */
 
@@ -76,6 +77,7 @@ int main()
 					con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
 					renderer.Update();
 					renderer.Render();
+					renderer.Render2D();
 					swap->Present(1, 0);
 
 					// release incremented COM reference counts

@@ -28,7 +28,7 @@ set(SOURCE_CODE
 	Source/Utils/Sprite.h
 	Source/Utils/tinyxml2.cpp
 	Source/Utils/tinyxml2.h
-	Source/Systems/renderer_3D.h
+	Source/Systems/renderer.h
 )
 
 if(WIN32)
