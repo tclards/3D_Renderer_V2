@@ -1,6 +1,7 @@
 #include <d3dcompiler.h>	// required for compiling shaders on the fly, consider pre-compiling instead
 #pragma comment(lib, "d3dcompiler.lib") 
 #include "renderer.h"
+#include "../Utils/FileIntoString.h"
 
 void PrintLabeledDebugString(const char* label, const char* toPrint)
 {
@@ -69,9 +70,9 @@ DirectXRendererLogic::DirectXRendererLogic(GW::SYSTEM::GWindow _win, GW::GRAPHIC
 	window = _win;
 	d3dSurface = _d3d;
 
-	InitializeSound();
-	loadLevel();
+	//InitializeSound();
 	InitializeMatricesAndVariables();
+	loadLevel();
 	InitializeConstantBufferData();
 	IntializeGraphics();
 
@@ -91,12 +92,12 @@ void DirectXRendererLogic::loadLevel()
 	const char* levelToLoad = levels[levelIndex];
 
 	// begin loading level
-	log.Create("../LevelLoaderLog.txt");
+	log.Create("../../LevelLoaderLog.txt");
 	log.EnableConsoleLogging(true); // mirror output to the console
 	log.Log("Start Program.");
 
 	loadedLevel.UnloadLevel();
-	loadedLevel.LoadLevel(levelToLoad, "../../Assets/Level_Assets", log.Relinquish());
+	loadedLevel.LoadLevel(levelToLoad, "../../Assets/", log.Relinquish());
 
 	ID3D11Device* creator;
 	d3dSurface.GetDevice((void**)&creator);
@@ -494,6 +495,8 @@ void DirectXRendererLogic::InitializePipeline_2D(ID3D11Device* creator)
 // Shaders
 Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader(ID3D11Device* creator, UINT compilerFlags)
 {
+	vertexShaderSource = ReadFileIntoString("../Shaders/VertexShader.hlsl"); // may need to reset this filepath to match others - pending solution for ReadfileIntoString() failure
+
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
 
 	HRESULT compilationResult =
@@ -517,6 +520,8 @@ Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader(ID3D1
 }
 Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompilePixelShader(ID3D11Device* creator, UINT compilerFlags)
 {
+	pixelShaderSource = ReadFileIntoString("../Shaders/PixelShader.hlsl");
+
 	Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
 
 	HRESULT compilationResult =
@@ -540,6 +545,8 @@ Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompilePixelShader(ID3D11
 }
 Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader_2D(ID3D11Device* creator, UINT compilerFlags)
 {
+	vertexShaderSource_2D = ReadFileIntoString("../Shaders/VertexShader_2D.hlsl");
+
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
 
 	HRESULT compilationResult =
@@ -563,6 +570,8 @@ Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompileVertexShader_2D(ID
 }
 Microsoft::WRL::ComPtr<ID3DBlob> DirectXRendererLogic::CompilePixelShader_2D(ID3D11Device* creator, UINT compilerFlags)
 {
+	pixelShaderSource_2D = ReadFileIntoString("../Shaders/PixelShader_2D.hlsl");
+
 	Microsoft::WRL::ComPtr<ID3DBlob> psBlob, errors;
 
 	HRESULT compilationResult =

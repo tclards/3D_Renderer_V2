@@ -2,20 +2,28 @@
 #define GATEWARE_ENABLE_SYSTEM // Graphics libs require system level libraries
 #define GATEWARE_ENABLE_GRAPHICS // Enables all Graphics Libraries
 #define GATEWARE_ENABLE_MATH // Enables Math
+#define GATEWARE_ENABLE_MATH2D // Enables 2D Math
 #define GATEWARE_ENABLE_INPUT // Enables User Input
 #define GATEWARE_ENABLE_AUDIO // Enables Audio
+
+// Disable unused graphics libraries
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE
 #define GATEWARE_DISABLE_GRASTERSURFACE
 #define GATEWARE_DISABLE_GOPENGLSURFACE
 #define GATEWARE_DISABLE_GVULKANSURFACE
+
 #include "../gateware-main/Gateware.h"
-#include "Utils/FileIntoString.h"
 #include "Systems/renderer.h"
 
 using namespace GW;
 using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
+
+// main.cpp - #define enable commands for gatware seem unreliable atm - output window keeps saying to enable gateware core (??)
+// renderer.cpp initializeSound() broken
+// renderer.cpp compile vertext shader -> fileintostring failure on file.create unsupported interface
+// loadLevel broken
 
 // lets pop a window and use D3D11 to clear to a navy blue screen
 int main()

@@ -2,9 +2,9 @@
 #ifndef DIRECTXRENDERERLOGIC_H
 #define DIRECTXRENDERERLOGIC_H
 
-#define TEXTURES_PATH "../Textures/"
-#define LTEXTURES_PATH L"../Textures/"
-#define XML_PATH "../XML/"
+#define TEXTURES_PATH "../../Textures/"
+#define LTEXTURES_PATH L"../../Textures/"
+#define XML_PATH "../../XML/"
 
 /*
 Debug Keys:
@@ -148,16 +148,16 @@ class DirectXRendererLogic
 	// Level Loading Containers
 	GW::SYSTEM::GLog									log;
 	Level_Data											loadedLevel;
-	const char* level_00 = "../Levels/GameLevel.txt";
-	const char* level_01 = "../Levels/GameLevelTest.txt";
+	const char* level_00 = "../../Levels/GameLevel.txt";
+	const char* level_01 = "../../Levels/GameLevelTest.txt";
 	const char* levels[2] = { level_00, level_01 };
 	int levelIndex = 0;
 	// music and audioFX data
 	GW::AUDIO::GAudio audioPlayer;
 	GW::AUDIO::GSound loadingFX;
 	GW::AUDIO::GMusic music;
-	const char* loadingSound = "../SoundFX/loadingFX.wav";
-	const char* backgroundMusic = "../SoundFX/music.wav";
+	const char* loadingSound = "../../SoundFX/loadingFX.wav";
+	const char* backgroundMusic = "../../SoundFX/music.wav";
 	// WireFrame Debug Mode
 	ID3D11RasterizerState* WireFrame;
 	D3D11_RASTERIZER_DESC wfdesc;

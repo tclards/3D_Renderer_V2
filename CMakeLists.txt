@@ -30,6 +30,7 @@ set(SOURCE_CODE
 	Source/Utils/tinyxml2.h
 	Source/Systems/renderer.cpp
 	Source/Systems/renderer.h
+	gateware-main/Gateware.h
 )
 
 if(WIN32)
