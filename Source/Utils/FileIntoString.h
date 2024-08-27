@@ -8,12 +8,7 @@ std::string ReadFileIntoString(const char* filePath)
 	unsigned int stringLength = 0;
 	GW::SYSTEM::GFile file;
 
-	/*char* outdir = new char[80];
-	unsigned int outdirStringLength = 0;
-	file.GetCurrentWorkingDirectory(outdir, outdirStringLength);
-	file.SetCurrentWorkingDirectory("../../Shaders/");*/
-
-	file.Create(); // this is where the interface unsupported return happens - needs fixing
+	file.Create();
 	file.GetFileSize(filePath, stringLength);
 
 	if (stringLength > 0 && +file.OpenBinaryRead(filePath))

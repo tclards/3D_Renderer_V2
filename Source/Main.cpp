@@ -2,17 +2,14 @@
 #define GATEWARE_ENABLE_SYSTEM // Graphics libs require system level libraries
 #define GATEWARE_ENABLE_GRAPHICS // Enables all Graphics Libraries
 #define GATEWARE_ENABLE_MATH // Enables Math
-#define GATEWARE_ENABLE_MATH2D // Enables 2D Math
 #define GATEWARE_ENABLE_INPUT // Enables User Input
 #define GATEWARE_ENABLE_AUDIO // Enables Audio
-
-// Disable unused graphics libraries
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE
 #define GATEWARE_DISABLE_GRASTERSURFACE
 #define GATEWARE_DISABLE_GOPENGLSURFACE
 #define GATEWARE_DISABLE_GVULKANSURFACE
-
 #include "../gateware-main/Gateware.h"
+#include "Utils/FileIntoString.h"
 #include "Systems/renderer.h"
 
 using namespace GW;
@@ -20,10 +17,30 @@ using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
 
-// main.cpp - #define enable commands for gatware seem unreliable atm - output window keeps saying to enable gateware core (??)
-// renderer.cpp initializeSound() broken
-// renderer.cpp compile vertext shader -> fileintostring failure on file.create unsupported interface
-// loadLevel broken
+/* Controls:
+
+Debug Keys - 
+Num Pad 1 - Toggle Orthographic mode
+Num Pad 2 - Toggle Splitscreen mode
+Num Pad 3 - Toggle WireFrame mode
+Num Pad 7 - Toggle 2D Rendering
+Num Pad 8 - Toggle 3D Rendering
+F1 - Load Next Level
+
+Keyboard -
+Q/E - Rotate Camera Orientation
+W/A/S/D - Move Camera
+Mouse - Look Around
+L Shift/Space - Move up and down
+
+Controller -
+A/B - Rotate Camera Orientation
+Left Stick - Move Camera
+Right Stick - Look Around
+Right Bumper - Load Next Level
+Left/Right Trigger - move up and down
+
+*/
 
 // lets pop a window and use D3D11 to clear to a navy blue screen
 int main()
@@ -44,7 +61,7 @@ int main()
 		win.Register(msgs);
 		if (+d3d11.Create(win, GW::GRAPHICS::DEPTH_BUFFER_SUPPORT))
 		{
-			DirectXRendererLogic renderer(win, d3d11);
+			Renderer renderer(win, d3d11);
 			while (+win.ProcessWindowEvents())
 			{
 				IDXGISwapChain* swap;
@@ -60,6 +77,7 @@ int main()
 					con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
 					renderer.Update();
 					renderer.Render();
+					renderer.Render2D();
 					swap->Present(1, 0);
 
 					// release incremented COM reference counts
