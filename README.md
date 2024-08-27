@@ -6,19 +6,17 @@ Build with cmake using "cmake -S ./ -B ./build"
 
 Debug Keys:
 
-Num Pad 1 - Toggle Debug Free Cams
+Num Pad 1 - Toggle Orthographic mode
 
-Num Pad 2 - Toggle Splitscreen (DISABLED)
+Num Pad 2 - Toggle Splitscreen mode
 
 Num Pad 3 - Toggle WireFrame mode
 
-Num Pad 6 - Toggle Orthographic Projection Mode
+Num Pad 7 - Toggle 2D Rendering
+
+Num Pad 8 - Toggle 3D Rendering
 
 F1 - Load Next Level
-
-Num Pad 7 & 8 - Change Health
-
-Num Pad 4 & 5 - Change Ammo
 
 
 FreeCam Controls :
